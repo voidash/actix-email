@@ -1,10 +1,13 @@
 //! tests/health_check.rs
 use std::net::TcpListener;
+use sqlx::{PgConnection, Connection};
+use z2p::configuration::get_configuration;
+use z2p::startup::run;
 
 fn spawn_app() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("failed to bind address");
     let port = listener.local_addr().unwrap().port();
-    let server = z2p::run(listener).expect("failed to bind address");
+    let server = run(listener).expect("failed to bind address");
     let _ = tokio::spawn(server);
     format!("http://127.0.0.1:{}", port)
 }
@@ -29,6 +32,15 @@ async fn health_check_test() {
 #[actix_rt::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
     let app_address = spawn_app();
+    let configuration = get_configuration().expect("failed to read configuration");
+    let connection_string = configuration.database.connection_string();
+    println!("{}",connection_string);
+
+
+    let connection = PgConnection::connect(&connection_string)
+                     .await
+                     .expect("Failed to connect to postgres");
+
     let client = reqwest::Client::new();
     let body = "name=ashish&email=ashish.thapa477%40gmail.com";
 
